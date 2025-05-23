@@ -1,0 +1,3 @@
+[submodule "fin-scraper"]
+	path = fin-scraper
+	url = https://github.com/ForgottenLight4415/fin-scraper.git
