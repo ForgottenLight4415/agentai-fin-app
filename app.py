@@ -55,22 +55,44 @@ def get_insight():
 def verify_insight():
     try:
         data = request.get_json()
-        financials = data.get('financials')
+        ticker = data.get('ticker')
+        financial_data = data.get('financials')
         insight = data.get('insight')
 
-        if not financials or not insight:
-            return jsonify({"error": "Missing data or insight"}), 400
+        if not ticker or not financial_data or not insight:
+            return jsonify({"error": "Missing required data"}), 400
 
-        pe_ratio = float(financials.get('pe_ratio', 100))
-        verdict = "BUY" if pe_ratio < 80 else "HOLD"
+        # Format string for LLM
+        formatted_data = "\n".join([f"{k}: {v}" for k, v in financial_data.items()])
+
+        # Run LangChain verifier
+        response = verifier_chain.run({
+            "ticker": ticker,
+            "financial_data": formatted_data,
+            "recommendation": insight
+        })
+
+        # Try to parse LLM JSON-like output
+        import re, json
+        match = re.search(r"\{.*\}", response, re.DOTALL)
+        if match:
+            structured = json.loads(match.group(0))
+        else:
+            structured = {
+                "verdict": "UNCERTAIN",
+                "confidence": "N/A",
+                "justification": response.strip()
+            }
 
         return jsonify({
-            "verdict": verdict,
-            "final_summary": f"{verdict} based on P/E ratio and agent cross-checks."
+            "verdict": structured.get("verdict"),
+            "confidence": structured.get("confidence"),
+            "justification": structured.get("justification")
         }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
