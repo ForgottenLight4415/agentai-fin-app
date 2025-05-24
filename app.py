@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from finscraper.scraper_tool.fetcher import fetch_stock_data_yf
-# from agent_module.agent_chain import generate_insight
+
+from Agentmodules.finscraper.scraper_tool.fetcher import fetch_stock_data_yf
+from Agentmodules.agent import get_recommendation
+from Agentmodules.testing_bot import verify_recommendation, parse_financials_string
 
 app = Flask(__name__)
 CORS(app)  # Allow frontend access from Orchids/React
@@ -29,6 +31,7 @@ def analyze():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route('/insight', methods=['POST'])
 def get_insight():
     try:
@@ -39,9 +42,11 @@ def get_insight():
         if not ticker or not financials:
             return jsonify({"error": "Missing ticker or financials"}), 400
 
-        # Use this when LangChain agent is ready:
-        # insight = generate_insight(ticker, financials)
-        insight = f"Recommendation: BUY – Based on strong EPS and healthy P/E ratio for {ticker}."
+        # If financials are passed as raw string, parse them
+        if isinstance(financials, str):
+            financials = parse_financials_string(financials)
+
+        insight = get_recommendation(ticker, tone="formal")
 
         return jsonify({
             "ticker": ticker,
@@ -50,6 +55,7 @@ def get_insight():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/verifier', methods=['POST'])
 def verify_insight():
@@ -62,32 +68,19 @@ def verify_insight():
         if not ticker or not financial_data or not insight:
             return jsonify({"error": "Missing required data"}), 400
 
-        # Format string for LLM
-        formatted_data = "\n".join([f"{k}: {v}" for k, v in financial_data.items()])
+        # If financial_data is a string, parse it
+        if isinstance(financial_data, str):
+            financial_data = parse_financials_string(financial_data)
 
-        # Run LangChain verifier
-        response = verifier_chain.run({
-            "ticker": ticker,
-            "financial_data": formatted_data,
-            "recommendation": insight
-        })
-
-        # Try to parse LLM JSON-like output
-        import re, json
-        match = re.search(r"\{.*\}", response, re.DOTALL)
-        if match:
-            structured = json.loads(match.group(0))
-        else:
-            structured = {
-                "verdict": "UNCERTAIN",
-                "confidence": "N/A",
-                "justification": response.strip()
-            }
+        result = verify_recommendation(ticker, financial_data, insight)
 
         return jsonify({
-            "verdict": structured.get("verdict"),
-            "confidence": structured.get("confidence"),
-            "justification": structured.get("justification")
+            "ticker": ticker,
+            "verdict": result.get("verdict"),
+            "confidence": result.get("confidence"),
+            "justification": result.get("justification"),
+            "supporting_headlines": result.get("supporting_headlines_from_llm", []),
+            "news_headlines": result.get("news_headlines", [])
         }), 200
 
     except Exception as e:
