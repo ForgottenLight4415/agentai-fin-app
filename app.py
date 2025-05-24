@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from finscraper.scraper_tool.fetcher import fetch_stock_data_yf
+# from finscraper.scraper_tool.fetcher import fetch_stock_data_yf
 # from agent_module.agent_chain import generate_insight
 
 app = Flask(__name__)
