@@ -3,7 +3,6 @@ from flask_cors import CORS
 import sys
 import os
 import pandas as pd
-from flask_socketio import SocketIO, emit
 
 # Add submodule (or inner directory) to Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -12,8 +11,7 @@ if inner_path not in sys.path:
     sys.path.insert(0, inner_path)
 
 from agent import get_recommendation
-from testing_bot import parse_financials_string,verify_recommendation
-from finscraper.scraper_tool.tool import stock_data_tool,stock_news_tool
+from testing_bot import run_full_analysis
 
 # Load NASDAQ symbol lookup table once on startup
 csv_path = os.path.join(current_dir,"static", "nasdaq-listed-symbols.csv")
@@ -54,49 +52,31 @@ def resolve_ticker(query: str) -> str:
 # Flask app config
 app = Flask(__name__)
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "ok"}), 200
 
-#@app.route('/insight', methods=['POST'])
-@socketio.on('insight')
-def handle_run_analysis(data):
-    query = data.get('query')
-    ticker = resolve_ticker(query)
-
-    if not ticker:
-        emit('error', {'error': 'Invalid ticker or company name'})
-        return
-
-    emit('stage_0_ack', {'message': f"🔁 Starting analysis for {ticker}"})
-
+@app.route('/insight', methods=['POST'])
+def get_insight():
     try:
-        # 🔍 STAGE 1: Financial + News Data
-        raw_financials = stock_data_tool.run(ticker)
-        financials = parse_financials_string(raw_financials)
-        news = stock_news_tool.run(ticker)
-        emit('stage_1_financials', {
-            'ticker': ticker,
-            'financials': financials,
-            'news_headlines': news.split("\n")[:5]
-        })
+        data = request.get_json()
+        input_query = data.get('query')
 
-        # 🤖 STAGE 2: Generate Recommendation
-        recommendation = get_recommendation(ticker)
-        emit('stage_2_recommendation', {
-            'recommendation': recommendation
-        })
+        if not input_query:
+            return jsonify({"error": "Missing ticker or company name"}), 400
 
-        # 🔎 STAGE 3: Verifier Bot
-        result = verify_recommendation(ticker, financials, recommendation)
-        emit('stage_3_verification', result)
+        ticker = resolve_ticker(input_query)
+        if not ticker:
+            return jsonify({"error": "Invalid company name or ticker symbol"}), 400
+
+        result = run_full_analysis(ticker=ticker, tone="formal", use_mock=False)
+
+        return jsonify(result), 200
 
     except Exception as e:
-        emit('error', {'error': str(e)})
-
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=5050)
+    app.run(debug=True, port=5050)
