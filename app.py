@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-from Agentmodules.finscraper.scraper_tool.fetcher import fetch_stock_data_yf
+#from Agentmodules.finscraper.scraper_tool.fetcher import fetch_stock_data_yf
 from Agentmodules.agent import get_recommendation
 from Agentmodules.testing_bot import verify_recommendation, parse_financials_string
 
