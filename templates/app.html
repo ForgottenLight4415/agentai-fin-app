@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentimint – Financial Analyst Agent</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .bot-card {
+      padding: 1rem;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #0d6efd;
+    }
+    .badge-buy {
+      background-color: #198754;
+    }
+    .badge-sell {
+      background-color: #dc3545;
+    }
+    .card-header-icon {
+      font-size: 1.5rem;
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+  <h1 class="text-center text-success mb-3 fw-bold">📈 Sentimint</h1>
+  <p class="text-center text-muted mb-5">AI-powered stock insight with multi-agent reasoning.</p>
+
+  <!-- Input Form -->
+  <form method="POST" class="card card-body shadow-sm mb-5 border-primary border-2">
+    <label for="ticker" class="form-label fw-semibold">Enter Company Name or Ticker</label>
+    <input name="ticker" id="ticker" type="text" placeholder="e.g. Tesla or TSLA" class="form-control mb-3" required>
+    <button type="submit" class="btn btn-success w-100">🚀 Run Analysis</button>
+  </form>
+
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  {% if data %}
+  <!-- Agent 1: Scraper -->
+  <div class="mb-4">
+    <h4 class="text-primary"><span class="card-header-icon">📦</span>Agent 1 – Scraper</h4>
+    <div class="bot-card border-start border-4 border-primary">
+      <p class="mb-2">Fetched financial data for <strong>{{ ticker }}</strong>:</p>
+      <ul class="mb-0 list-group list-group-flush">
+        <li class="list-group-item">💵 Price: {{ data.stock_price }}</li>
+        <li class="list-group-item">📊 P/E Ratio: {{ data.pe_ratio }}</li>
+        <li class="list-group-item">📈 EPS (TTM): {{ data.eps_ttm }}</li>
+        <li class="list-group-item">🏦 Market Cap: {{ data.market_cap }}</li>
+        <li class="list-group-item">💰 Revenue: {{ data.revenue }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Agent 2: Analyzer -->
+  <div class="mb-4">
+    <h4 class="text-warning"><span class="card-header-icon">🧠</span>Agent 2 – Analyzer</h4>
+    <div class="bot-card border-start border-4 border-warning">
+      <p class="fw-semibold mb-1">LLM Analysis Output:</p>
+      <p class="text-dark">{{ insight }}</p>
+    </div>
+  </div>
+
+  <!-- Agent 3: Verifier -->
+  <div class="mb-4">
+    <h4 class="text-danger"><span class="card-header-icon">🔍</span>Agent 3 – Verifier</h4>
+    <div class="bot-card border-start border-4 border-danger">
+      <p>Cross-validated Agent 2's insight using:</p>
+      <ul>
+        <li>Scraped metrics</li>
+        <li>Rules (e.g., P/E > 100 = risky)</li>
+        <li>External context (optional)</li>
+      </ul>
+      <p class="fw-semibold">Final Verdict:
+        {% if verdict == 'BUY' %}
+          <span class="badge badge-buy text-white px-3 py-2">BUY</span>
+        {% elif verdict == 'SELL' %}
+          <span class="badge badge-sell text-white px-3 py-2">SELL</span>
+        {% else %}
+          <span class="badge bg-secondary text-white px-3 py-2">HOLD</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Final Output -->
+  <div class="card card-body shadow-sm border-2 border-success">
+    <h5 class="mb-3 text-success">✅ Final Summary</h5>
+    <p class="mb-3">{{ final_summary }}</p>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-success">📄 Download PDF</button>
+      <button class="btn btn-outline-secondary">📋 Copy Insight</button>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+</body>
+</html>
