@@ -1,3 +1,6 @@
 [submodule "finscraper"]
 	path = finscraper
 	url = https://github.com/ForgottenLight4415/finscraper.git
+[submodule "Agentmodules"]
+	path = Agentmodules
+	url = https://github.com/RohanChavan0701/Agentmodules.git
