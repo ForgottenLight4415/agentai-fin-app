@@ -11,8 +11,7 @@ if inner_path not in sys.path:
     sys.path.insert(0, inner_path)
 
 from agent import get_recommendation
-from testing_bot import verify_recommendation, parse_financials_string
-from finscraper.scraper_tool.tool import stock_data_tool
+from testing_bot import run_full_analysis
 
 # Load NASDAQ symbol lookup table once on startup
 csv_path = os.path.join(current_dir,"static", "nasdaq-listed-symbols.csv")
@@ -64,40 +63,20 @@ def get_insight():
         data = request.get_json()
         input_query = data.get('query')
 
+        if not input_query:
+            return jsonify({"error": "Missing ticker or company name"}), 400
+
         ticker = resolve_ticker(input_query)
         if not ticker:
-            return jsonify({"error": "Invalid company or ticker symbol."}), 400
-        print(ticker)
-        recommendation = get_recommendation(ticker, tone="formal")
+            return jsonify({"error": "Invalid company name or ticker symbol"}), 400
 
-        return jsonify({
-            "ticker": ticker,
-            "insight": recommendation
-        }), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/verifier', methods=['POST'])
-def verify_insight():
-    try:
-        data = request.get_json()
-        input_query = data.get('ticker')
-        insight = data.get('insight')
-
-        ticker = resolve_ticker(input_query)
-        if not ticker or not insight:
-            return jsonify({"error": "Missing required data"}), 400
-
-        raw_financials = stock_data_tool.run(ticker)
-        financial_data = parse_financials_string(raw_financials) if isinstance(raw_financials, str) else raw_financials
-
-        result = verify_recommendation(ticker, financial_data, insight)
+        result = run_full_analysis(ticker=ticker, tone="formal", use_mock=False)
 
         return jsonify(result), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5050)
